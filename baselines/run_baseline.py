@@ -16,7 +16,7 @@ args = get_args('run_baseline.py', ep_length=run_steps, sess_path=sess_path)
 
 env_config = {
                 'headless': True, 'save_final_state': True, 'early_stop': False, 
-                'action_freq': 24, 'init_state': '../fast_text_start.state', 'max_steps': run_steps,
+                'action_freq': 24, 'init_state': '../has_pokedex_nballs.state', 'max_steps': run_steps,
                 'print_rewards': True, 'save_video': True, 'session_path': sess_path,
                 'gb_path': '../PokemonRed.gb', 'debug': False, 'sim_frame_dist': 2_000_000.0
             }

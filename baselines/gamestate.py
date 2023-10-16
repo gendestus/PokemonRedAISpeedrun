@@ -1,6 +1,7 @@
 from pyboy import PyBoy
 
 class Gamestate:
+    # TODO: change to a query once per step class instead of making ad hoc memory reads
     def __init__(self, pyboy):
         self.pyboy = pyboy
 
@@ -168,6 +169,6 @@ class Gamestate:
         '''
         Gets player position as a tuple
         '''
-        x = self.read(0xD363)
-        y = self.read(0xD364)
+        x = self.read(0xD362)
+        y = self.read(0xD361)
         return (x, y)

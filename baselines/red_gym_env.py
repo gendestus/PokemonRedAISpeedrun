@@ -32,6 +32,9 @@ class RedGymEnv(Env):
         self.previous_map_id = -1
         self.seen_maps = []
 
+        # seen_position_combos are strings containing the map id and the player's position. We award a single point for entering a combo that we haven't seen yet to encourage exploration
+        self.seen_position_combos = []
+
         self.debug = config['debug']
         self.s_path = config['session_path']
         self.save_final_state = config['save_final_state']
@@ -317,9 +320,16 @@ class RedGymEnv(Env):
             print(f'seen_poke_count : {seen_poke_count}')
             print(f'oak_parcel: {oak_parcel} oak_pokedex: {oak_pokedex} all_events_score: {all_events_score}')
         '''
+
+        #this needs to be changed to a weighted point value system to guide the AI towards the critical path
         map_id = self.gamestate.get_current_map()
         if map_id not in self.seen_maps:
             self.seen_maps.append(map_id)
+        
+        player_position = self.gamestate.get_player_position()
+        position_combo = str(map_id) + str(player_position)
+        if position_combo not in self.seen_position_combos:
+            self.seen_position_combos.append(position_combo)
 
         state_scores = {
             #'event': self.update_max_event_rew(),  
@@ -333,7 +343,8 @@ class RedGymEnv(Env):
             #'money': money * 3,
             #'seen_poke': seen_poke_count * 400,
             #'explore': self.get_knn_reward()
-            'speedrun_map_progress': self.clamp(len(self.seen_maps) - 1, 0, 200) * 100
+            'speedrun_map_progress': self.clamp(len(self.seen_maps) - 1, 0, 200) * 10,
+            'speedrun_position_progress': self.clamp(len(self.seen_position_combos) - 1, 0, 200)
         }
         
         return state_scores
