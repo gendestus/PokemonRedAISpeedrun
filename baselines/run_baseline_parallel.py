@@ -40,7 +40,7 @@ if __name__ == '__main__':
     
     env_config = change_env(env_config, args)
     
-    num_cpu = 44 #64 #46  # Also sets the number of episodes per training iteration
+    num_cpu = 16 #64 #46  # Also sets the number of episodes per training iteration
     env = SubprocVecEnv([make_env(i, env_config) for i in range(num_cpu)])
     
     checkpoint_callback = CheckpointCallback(save_freq=ep_length, save_path=sess_path,
@@ -59,7 +59,7 @@ if __name__ == '__main__':
         model.rollout_buffer.n_envs = num_cpu
         model.rollout_buffer.reset()
     else:
-        model = PPO('CnnPolicy', env, verbose=1, n_steps=ep_length, batch_size=512, n_epochs=1, gamma=0.999)
+        model = PPO('MultiInputPolicy', env, verbose=1, n_steps=ep_length, batch_size=512, n_epochs=1, gamma=0.999)
     
     for i in range(learn_steps):
         model.learn(total_timesteps=(ep_length)*num_cpu*1000, callback=checkpoint_callback)

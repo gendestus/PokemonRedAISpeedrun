@@ -15,7 +15,7 @@ import hnswlib
 import mediapy as media
 import pandas as pd
 
-from gymnasium import Env, spaces
+from gymnasium import Env, spaces, wrappers
 from pyboy.utils import WindowEvent
 
 class RedGymEnv(Env):
@@ -23,6 +23,12 @@ class RedGymEnv(Env):
 
     def __init__(
         self, config=None):
+
+        self.FEATURES_KEY = "features"
+        self.FRAME_BUFFER_KEY = "frame_buffer"
+        
+        self.previous_map_id = -1
+        self.seen_maps = []
 
         self.debug = config['debug']
         self.s_path = config['session_path']
@@ -85,7 +91,8 @@ class RedGymEnv(Env):
 
         # Set these in ALL subclasses
         self.action_space = spaces.Discrete(len(self.valid_actions))
-        self.observation_space = spaces.Box(low=0, high=255, shape=self.output_full, dtype=np.uint8)
+        #self.observation_space = spaces.Box(low=0, high=255, shape=self.output_full, dtype=np.uint8)
+        self.observation_space = spaces.Dict({self.FEATURES_KEY:spaces.MultiDiscrete([255, 255, 255, 512, 255,255,255,255,255,255,512,255,255,255,255,255,255,255,512,255,255,255,255,255,255,255,512,255,255,255,255,255,255,255,512,255,255,255,255,255,255,255,512,255,255,255,255,255,255,255,512,255,255,255,255,255]), self.FRAME_BUFFER_KEY:spaces.Box(low=0, high=255, shape=self.output_full, dtype=np.uint8)})
 
         head = 'headless' if config['headless'] else 'SDL2'
 
@@ -141,7 +148,7 @@ class RedGymEnv(Env):
         self.progress_reward = self.get_game_state_reward()
         self.total_reward = sum([val for _, val in self.progress_reward.items()])
         self.reset_count += 1
-        return self.render(), {}
+        return {self.FEATURES_KEY:np.zeros(56, dtype=int), self.FRAME_BUFFER_KEY:self.render()}, {}
     
     def init_knn(self):
         # Declaring index
@@ -170,6 +177,126 @@ class RedGymEnv(Env):
                     ),
                     axis=0)
         return game_pixels_render
+    def get_observables(self, rendered_frame):
+        enemy_pokemon = self.read_m(0xCFE5)
+        enemy_pokemon_type1 = self.read_m(0xCFEA)
+        enemy_pokemon_type2 = self.read_m(0xCFEB)
+        enemy_pokemon_health = self.read_m(0xCFE6) + self.read_m(0xCFE7)
+        map_id = self.read_m(0xD35E)
+        position_x = self.read_m(0xD363)
+        position_y = self.read_m(0xD364)
+        player_pokemon1 = self.read_m(0xD16B)
+        player_pokemon1_type1 = self.read_m(0xD170)
+        player_pokemon1_type2 = self.read_m(0xD171)
+        player_pokemon1_health = self.read_m(0xD16C) + self.read_m(0xD16D)
+        player_pokemon1_move1 = self.read_m(0xD173)
+        player_pokemon1_move2 = self.read_m(0xD174)
+        player_pokemon1_move3 = self.read_m(0xD175)
+        player_pokemon1_move4 = self.read_m(0xD176)
+        player_pokemon2 = self.read_m(0xD197)
+        player_pokemon2_type1 = self.read_m(0xD19C)
+        player_pokemon2_type2 = self.read_m(0xD19D)
+        player_pokemon2_health = self.read_m(0xD198) + self.read_m(0xD199)
+        player_pokemon2_move1 = self.read_m(0xD19F)
+        player_pokemon2_move2 = self.read_m(0xD1A0)
+        player_pokemon2_move3 = self.read_m(0xD1A1)
+        player_pokemon2_move4 = self.read_m(0xD1A2)
+        player_pokemon3 = self.read_m(0xD1C3)
+        player_pokemon3_type1 = self.read_m(0xD1C8)
+        player_pokemon3_type2 = self.read_m(0xD1C9)
+        player_pokemon3_health = self.read_m(0xD1C4) + self.read_m(0xD1C5)
+        player_pokemon3_move1 = self.read_m(0xD1CB)
+        player_pokemon3_move2 = self.read_m(0xD1CC)
+        player_pokemon3_move3 = self.read_m(0xD1CD)
+        player_pokemon3_move4 = self.read_m(0xD1CE)
+        player_pokemon4 = self.read_m(0xD1EF)
+        player_pokemon4_type1 = self.read_m(0xD1F4)
+        player_pokemon4_type2 = self.read_m(0xD1F5)
+        player_pokemon4_health = self.read_m(0xD1F0) + self.read_m(0xD1F1)
+        player_pokemon4_move1 = self.read_m(0xD1F7)
+        player_pokemon4_move2 = self.read_m(0xD1F8)
+        player_pokemon4_move3 = self.read_m(0xD1F9)
+        player_pokemon4_move4 = self.read_m(0xD1FA)
+        player_pokemon5 = self.read_m(0xD21B)
+        player_pokemon5_type1 = self.read_m(0xD220)
+        player_pokemon5_type2 = self.read_m(0xD221)
+        player_pokemon5_health = self.read_m(0xD21C) + self.read_m(0xD21D)
+        player_pokemon5_move1 = self.read_m(0xD223)
+        player_pokemon5_move2 = self.read_m(0xD224)
+        player_pokemon5_move3 = self.read_m(0xD225)
+        player_pokemon5_move4 = self.read_m(0xD226)
+        player_pokemon6 = self.read_m(0xD247)
+        player_pokemon6_type1 = self.read_m(0xD24C)
+        player_pokemon6_type2 = self.read_m(0xD24D)
+        player_pokemon6_health = self.read_m(0xD248) + self.read_m(0xD249)
+        player_pokemon6_move1 = self.read_m(0xD24F)
+        player_pokemon6_move2 = self.read_m(0xD250)
+        player_pokemon6_move3 = self.read_m(0xD251)
+        player_pokemon6_move4 = self.read_m(0xD252)
+        num_badges_bitmask = self.read_m(0xD356)
+        num_badges = sum([int(x) for x in bin(num_badges_bitmask)[2:]])
+
+        na = np.array([
+            enemy_pokemon,
+            enemy_pokemon_health,
+            enemy_pokemon_type1, 
+            enemy_pokemon_type2, 
+            map_id, 
+            position_x, 
+            position_y, 
+            player_pokemon1, 
+            player_pokemon1_health, 
+            player_pokemon1_move1, 
+            player_pokemon1_move2, 
+            player_pokemon1_move3, 
+            player_pokemon1_move4, 
+            player_pokemon1_type1, 
+            player_pokemon1_type2,
+            player_pokemon2,
+            player_pokemon2_health,
+            player_pokemon2_move1,
+            player_pokemon2_move2,
+            player_pokemon2_move3,
+            player_pokemon2_move4,
+            player_pokemon2_type1,
+            player_pokemon2_type2,
+            player_pokemon3,
+            player_pokemon3_health,
+            player_pokemon3_move1,
+            player_pokemon3_move2,
+            player_pokemon3_move3,
+            player_pokemon3_move4,
+            player_pokemon3_type1,
+            player_pokemon3_type2,
+            player_pokemon4,
+            player_pokemon4_health,
+            player_pokemon4_move1,
+            player_pokemon4_move2,
+            player_pokemon4_move3,
+            player_pokemon4_move4,
+            player_pokemon4_type1,
+            player_pokemon4_type2,
+            player_pokemon5,
+            player_pokemon5_health,
+            player_pokemon5_move1,
+            player_pokemon5_move2,
+            player_pokemon5_move3,
+            player_pokemon5_move4,
+            player_pokemon5_type1,
+            player_pokemon5_type2,
+            player_pokemon6,
+            player_pokemon6_health,
+            player_pokemon6_move1,
+            player_pokemon6_move2,
+            player_pokemon6_move3,
+            player_pokemon6_move4,
+            player_pokemon6_type1,
+            player_pokemon6_type2,
+            num_badges])
+        if map_id != self.previous_map_id:
+            print(f'new map: {map_id}')
+            self.previous_map_id = map_id
+        return {self.FEATURES_KEY:na, self.FRAME_BUFFER_KEY:rendered_frame}
     
     def step(self, action):
 
@@ -203,8 +330,9 @@ class RedGymEnv(Env):
         self.save_and_print_info(step_limit_reached, obs_memory)
 
         self.step_count += 1
-
-        return obs_memory, new_reward*0.1, False, step_limit_reached, {}
+        obs = self.get_observables(obs_memory)
+        #return obs_memory, new_reward*0.1, False, step_limit_reached, {}
+        return obs, new_reward*0.1, False, step_limit_reached, {}
 
     def run_action_on_emulator(self, action):
         # press button then release after some steps
@@ -275,6 +403,8 @@ class RedGymEnv(Env):
         if new_step < 0 and self.read_hp_fraction() > 0:
             #print(f'\n\nreward went down! {self.progress_reward}\n\n')
             self.save_screenshot('neg_reward')
+        
+            
     
         self.total_reward = new_total
         return (new_step, 
@@ -286,7 +416,10 @@ class RedGymEnv(Env):
     def group_rewards(self):
         prog = self.progress_reward
         # these values are only used by memory
-        return (prog['level'] * 100, self.read_hp_fraction()*2000, prog['explore'] * 160)#(prog['events'], 
+        #return (prog['level'] * 100, self.read_hp_fraction()*2000, prog['explore'] * 160)#(prog['events'], 
+
+        # zeroing this out because I don't think it's relevant but who knows....might have to come back to it
+        return (0, 0, 0)#(prog['events'], 
                # prog['levels'] + prog['party_xp'], 
                # prog['explore'])
 
@@ -446,22 +579,28 @@ class RedGymEnv(Env):
             print(f'seen_poke_count : {seen_poke_count}')
             print(f'oak_parcel: {oak_parcel} oak_pokedex: {oak_pokedex} all_events_score: {all_events_score}')
         '''
-        
+        map_id = self.read_m(0xD35E)
+        if map_id not in self.seen_maps:
+            self.seen_maps.append(map_id)
+
         state_scores = {
             'event': self.update_max_event_rew(),  
             #'party_xp': 0.1*sum(poke_xps),
-            'level': self.get_levels_reward(), 
-            'heal': self.total_healing_rew,
+            #'level': self.get_levels_reward(), 
+            #'heal': self.total_healing_rew,
             'op_lvl': self.update_max_op_level(),
             'dead': -0.1*self.died_count,
             'badge': self.get_badges() * 2,
             #'op_poke': self.max_opponent_poke * 800,
             #'money': money * 3,
             #'seen_poke': seen_poke_count * 400,
-            'explore': self.get_knn_reward()
+            #'explore': self.get_knn_reward()
+            'speedrun_map_progress': self.clamp(len(self.seen_maps) - 1, 0, 200) * 100
         }
         
         return state_scores
+    def clamp(self, val, min_val, max_val):
+        return min(max(val, min_val), max_val)
     
     def save_screenshot(self, name):
         ss_dir = self.s_path / Path('screenshots')
