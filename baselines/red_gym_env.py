@@ -15,6 +15,7 @@ from gamestate import Gamestate
 import hnswlib
 import mediapy as media
 import pandas as pd
+import datetime
 
 from gymnasium import Env, spaces, wrappers
 from pyboy.utils import WindowEvent
@@ -52,6 +53,7 @@ class RedGymEnv(Env):
         self.instance_id = str(uuid.uuid4())[:8] if 'instance_id' not in config else config['instance_id']
         self.s_path.mkdir(exist_ok=True)
         self.all_runs = []
+        self.last_obs = None
 
         # Set this in SOME subclasses
         self.metadata = {"render.modes": []}
@@ -490,6 +492,7 @@ class RedGymEnv(Env):
         if map_id != self.previous_map_id:
             print(f'new map: {map_id}')
             self.previous_map_id = map_id
+        self.log_observables(na)
         return {self.FEATURES_KEY:na, self.FRAME_BUFFER_KEY:rendered_frame}
     
     def group_rewards(self):
@@ -502,6 +505,36 @@ class RedGymEnv(Env):
 
         # zeroing this out because I don't think it's relevant but who knows....might have to come back to it
         return (0, 0, 0)
+    def log_observables(self, obs: np.array):
+        '''
+        Logs the observables to a file if there's a change. Ignores player position since that constantly changes. Runs every step
+        '''
+        def generate_log_string(obs: np.array) -> str:
+            labels = {"enemy_pokemon":0,
+                  "enemy_pokemon_health":1,
+                  "enemy_pokemon_type1":2,
+                  "enemy_pokemon_type2":3,
+                  "map_id":4,
+                  "player_pokemon1":7,
+                  "player_pokemon2":15,
+                  "player_pokemon3":23,
+                  "player_pokemon4":31,
+                  "player_pokemon5":39,
+                  "player_pokemon6":47,
+                  "num_badges":55}
+            log_string = ''
+            for key, val in labels.items():
+                log_string += f'{key}: {obs[val]} |'
+            return log_string
+        
+
+        log_string = generate_log_string(obs)
+        if log_string != self.last_obs:
+            self.last_obs = log_string
+            with open(self.s_path / Path(f'obs_{self.instance_id}.txt'), 'a') as f:
+                f.write(f'{datetime.datetime.now()} :: {log_string}\n')
+
+        pass
         
     def run_action_on_emulator(self, action):
         '''
@@ -587,9 +620,7 @@ class RedGymEnv(Env):
         new_prog = self.group_rewards()
         new_total = sum([val for _, val in self.progress_reward.items()]) #sqrt(self.explore_reward * self.progress_reward)
         new_step = new_total - self.total_reward
-        
-            
-    
+
         self.total_reward = new_total
         return (new_step, 
                    (new_prog[0]-old_prog[0], 
