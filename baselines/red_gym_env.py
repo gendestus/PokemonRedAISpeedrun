@@ -140,8 +140,6 @@ class RedGymEnv(Env):
         with open(self.init_state, "rb") as f:
             self.pyboy.load_state(f)
 
-        self.init_knn()
-
         self.recent_memory = np.zeros((self.output_shape[1]*self.memory_height, 3), dtype=np.uint8)
         
         self.recent_frames = np.zeros(
@@ -185,11 +183,11 @@ class RedGymEnv(Env):
         obs_memory = self.render()
 
         # trim off memory from frame for knn index
-        frame_start = 2 * (self.memory_height + self.mem_padding)
-        obs_flat = obs_memory[
-            frame_start:frame_start+self.output_shape[0], ...].flatten().astype(np.float32)
+        # frame_start = 2 * (self.memory_height + self.mem_padding)
+        # obs_flat = obs_memory[
+        #     frame_start:frame_start+self.output_shape[0], ...].flatten().astype(np.float32)
 
-        self.update_frame_knn_index(obs_flat)
+        # self.update_frame_knn_index(obs_flat)
 
         new_reward, new_prog = self.update_reward()
 
@@ -337,18 +335,6 @@ class RedGymEnv(Env):
         }
         
         return state_scores
-    
-    def get_knn_reward(self):
-        '''
-        Gets the reward for the current frame based on the KNN index. Called every step.
-        Deprecated for speedrunning since we have map ids
-        '''
-        pre_rew = 0.004
-        post_rew = 0.01
-        cur_size = self.knn_index.get_current_count()
-        base = (self.base_explore if self.levels_satisfied else cur_size) * pre_rew
-        post = (cur_size if self.levels_satisfied else 0) * post_rew
-        return base + post
     
     def get_levels_reward(self):
         '''
@@ -515,19 +501,7 @@ class RedGymEnv(Env):
         #return (prog['level'] * 100, self.read_hp_fraction()*2000, prog['explore'] * 160)#(prog['events'], 
 
         # zeroing this out because I don't think it's relevant but who knows....might have to come back to it
-        return (0, 0, 0)#(prog['events'], 
-               # prog['levels'] + prog['party_xp'], 
-               # prog['explore'])
-    
-    def init_knn(self):
-        '''
-        Initializes KNN for the frame buffer matching thing for exploration. Deprecated for speedrunning since we have map ids
-        '''
-        # Declaring index
-        self.knn_index = hnswlib.Index(space='l2', dim=self.vec_dim) # possible options are l2, cosine or ip
-        # Initing index - the maximum number of elements should be known beforehand
-        self.knn_index.init_index(
-            max_elements=self.num_elements, ef_construction=100, M=16)
+        return (0, 0, 0)
         
     def run_action_on_emulator(self, action):
         '''
@@ -601,28 +575,6 @@ class RedGymEnv(Env):
             ss_dir / Path(f'frame{self.instance_id}_r{self.total_reward:.4f}_{self.reset_count}_{name}.jpeg'), 
             self.render(reduce_res=False))
         
-    def update_frame_knn_index(self, frame_vec):
-        '''
-        Updates the frame knn index. Called every step.
-        Probably also deprecated for speedrunning since we have map ids
-        '''
-        if self.get_levels_sum() >= 22 and not self.levels_satisfied:
-            self.levels_satisfied = True
-            self.base_explore = self.knn_index.get_current_count()
-            self.init_knn()
-
-        if self.knn_index.get_current_count() == 0:
-            # if index is empty add current frame
-            self.knn_index.add_items(
-                frame_vec, np.array([self.knn_index.get_current_count()])
-            )
-        else:
-            # check for nearest frame and add if current 
-            labels, distances = self.knn_index.knn_query(frame_vec, k = 1)
-            if distances[0] > self.similar_frame_dist:
-                self.knn_index.add_items(
-                    frame_vec, np.array([self.knn_index.get_current_count()])
-                )
     def update_reward(self):
         '''
         Updates the reward values based on game state. Called every step.
