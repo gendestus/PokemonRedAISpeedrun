@@ -3,6 +3,8 @@ I saw this project and was immediately impressed with the ingenuity and engineer
 
 I'll be trying stuff out in my spare time.
 
+as of right now I'm only pushing code changes and not checkpoints since I'm coding on a separate machine...so the pretrained model provided will not include speedrun features or rewards.
+
 Original README below:
 
 
