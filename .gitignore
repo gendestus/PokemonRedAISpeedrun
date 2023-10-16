@@ -7,4 +7,4 @@ rollouts
 raw_documentation
 *.pem
 _autoplay.mp4
-session_*
+baselines/session_*/
