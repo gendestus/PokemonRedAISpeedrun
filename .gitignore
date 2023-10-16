@@ -8,3 +8,5 @@ raw_documentation
 *.pem
 _autoplay.mp4
 baselines/session_*/
+*.mp4
+*.jpeg
