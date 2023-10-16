@@ -1,3 +1,11 @@
+# Alright, here's the plan
+I saw this project and was immediately impressed with the ingenuity and engineering that went into it. So naturally it got me thinking about what the next steps would be. I'm wondering if we can't fine tune the rewards to minimize play time and try and beat the speedruns. I'm thinking that by feeding additional memory poked data like map ids, enemy pokemon, badge times, etc in addition to the frame buffer as input features as well as generating higher rewards based on milestone times, we can start seeing some competitive runs out of Roko's Basilisk here.
+
+I'll be trying stuff out in my spare time.
+
+Original README below:
+
+
 # Train RL agents to play Pokemon Red!
 
 <a href="https://youtu.be/DcYLT37ImBY">
