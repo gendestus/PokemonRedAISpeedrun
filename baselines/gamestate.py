@@ -35,7 +35,7 @@ class Gamestate:
         '''
         Gets current map id
         '''
-        return self.read(0xCFE5)
+        return self.read(0xD35E)
     
     def get_num_badges(self) -> int:
         '''

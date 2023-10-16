@@ -11,7 +11,10 @@ from einops import rearrange
 import matplotlib.pyplot as plt
 from skimage.transform import resize
 from pyboy import PyBoy
+
 from gamestate import Gamestate
+from reward_events import RewardEvents
+
 import hnswlib
 import mediapy as media
 import pandas as pd
@@ -34,6 +37,8 @@ class RedGymEnv(Env):
 
         # seen_position_combos are strings containing the map id and the player's position. We award a single point for entering a combo that we haven't seen yet to encourage exploration
         self.seen_position_combos = []
+
+        self.game_start_time = None
 
         self.debug = config['debug']
         self.s_path = config['session_path']
@@ -110,6 +115,7 @@ class RedGymEnv(Env):
                 hide_window='--quiet' in sys.argv,
             )
         self.gamestate = Gamestate(self.pyboy)
+        self.reward_events = RewardEvents()
 
         self.screen = self.pyboy.botsupport_manager().screen()
 
@@ -180,6 +186,8 @@ class RedGymEnv(Env):
     
     # Override from Gym
     def step(self, action):
+        if self.game_start_time == None:
+            self.game_start_time = datetime.datetime.now()
 
         self.run_action_on_emulator(action)
         self.append_agent_stats(action)
@@ -331,6 +339,10 @@ class RedGymEnv(Env):
         if position_combo not in self.seen_position_combos:
             self.seen_position_combos.append(position_combo)
 
+        if self.gamestate.get_current_map() != 40 and not self.reward_events.HasLeftOakLab:
+            self.reward_events.HasLeftOakLab = True
+            print("LEFT OAK'S LAB FOR THE FIRST TIME")
+
         state_scores = {
             #'event': self.update_max_event_rew(),  
             #'party_xp': 0.1*sum(poke_xps),
@@ -344,7 +356,8 @@ class RedGymEnv(Env):
             #'seen_poke': seen_poke_count * 400,
             #'explore': self.get_knn_reward()
             'speedrun_map_progress': self.clamp(len(self.seen_maps) - 1, 0, 200) * 10,
-            'speedrun_position_progress': self.clamp(len(self.seen_position_combos) - 1, 0, 200)
+            'speedrun_position_progress': self.clamp(len(self.seen_position_combos) - 1, 0, 200),
+            'speedrun_events': self.reward_events.calculate_reward(self.game_start_time)
         }
         
         return state_scores
