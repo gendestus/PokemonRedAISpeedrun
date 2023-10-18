@@ -27,7 +27,7 @@ class RedGymEnv(Env):
 
 
     def __init__(
-        self, config=None):
+        self, db_obj, config=None):
 
         self.FEATURES_KEY = "features"
         self.FRAME_BUFFER_KEY = "frame_buffer"
@@ -120,6 +120,8 @@ class RedGymEnv(Env):
         self.screen = self.pyboy.botsupport_manager().screen()
 
         self.pyboy.set_emulation_speed(0 if config['headless'] else 6)
+        self.db = db_obj
+        self.db_instance_id = self.db.create_instance(self.db.session_id)
         self.reset()
 
     # Override from Gym
@@ -216,6 +218,8 @@ class RedGymEnv(Env):
 
         self.step_count += 1
         obs = self.get_observables(obs_memory)
+        gamestate = self.gamestate.build_gamestate_dict(self.total_reward)
+        self.db.add_gamestate(self.db_instance_id, gamestate)
         #return obs_memory, new_reward*0.1, False, step_limit_reached, {}
         return obs, new_reward*0.1, False, step_limit_reached, {}
     
@@ -341,7 +345,7 @@ class RedGymEnv(Env):
 
         if self.gamestate.get_current_map() != 40 and not self.reward_events.HasLeftOakLab:
             self.reward_events.HasLeftOakLab = True
-            print("LEFT OAK'S LAB FOR THE FIRST TIME")
+            self.db.add_event(self.db_instance_id, f"steps taken: {self.step_count}", self.db.OAKLAB_TAG)
 
         state_scores = {
             #'event': self.update_max_event_rew(),  
@@ -396,6 +400,7 @@ class RedGymEnv(Env):
         Gets memory values for passing along to the observation space along with the frame buffer. These represent the input features for the model. Called every step and reset.
         Values are taken from https://datacrystal.romhacking.net/wiki/Pok%C3%A9mon_Red/Blue:RAM_map
         '''
+
         enemy_pokemon_info = self.gamestate.get_enemy_pokemon()
         enemy_pokemon = enemy_pokemon_info["species"]
         enemy_pokemon_type1 = enemy_pokemon_info["type1"]
@@ -514,8 +519,8 @@ class RedGymEnv(Env):
             player_pokemon6_type2,
             num_badges])
         if map_id != self.previous_map_id:
-            print(f'new map: {map_id}')
             self.previous_map_id = map_id
+            self.db.add_event(self.db_instance_id, str(map_id), self.db.NEWMAP_TAG)
         self.log_observables(na)
         return {self.FEATURES_KEY:na, self.FRAME_BUFFER_KEY:rendered_frame}
     

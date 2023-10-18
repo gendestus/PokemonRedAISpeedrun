@@ -10,6 +10,28 @@ class Gamestate:
     def read_bit(self, address, bit) -> bool:
         return bin(256 + self.read_m(address))[-bit-1] == '1'
     
+    def build_gamestate_dict(self, current_score) -> dict:
+        '''
+        Builds gamestate dict for db
+        '''
+        enemy_pokemon = self.get_enemy_pokemon()
+        party = self.get_party()
+        return {
+            "enemyPokemonID": enemy_pokemon["species"],
+            "enemyPokemonType1": enemy_pokemon["type1"],
+            "enemyPokemonType2": enemy_pokemon["type2"],
+            "enemyPokemonHealth": enemy_pokemon["health"],
+            "mapID": self.get_current_map(),
+            "numBadges": self.get_num_badges(),
+            "partyPokemonID1": party[0]["species"],
+            "partyPokemonID2": party[1]["species"],
+            "partyPokemonID3": party[2]["species"],
+            "partyPokemonID4": party[3]["species"],
+            "partyPokemonID5": party[4]["species"],
+            "partyPokemonID6": party[5]["species"],
+            "score": current_score
+        }
+    
     def get_badges_bitmask(self):
         '''
         Gets badges as a bitmask
