@@ -8,8 +8,9 @@ from stable_baselines3.common.vec_env import DummyVecEnv, SubprocVecEnv
 from stable_baselines3.common.utils import set_random_seed
 from stable_baselines3.common.callbacks import CheckpointCallback
 from argparse_pokemon import *
+from db import DB
 
-def make_env(rank, env_conf, seed=0):
+def make_env(rank, env_conf, session_id, seed=0):
     """
     Utility function for multiprocessed env.
     :param env_id: (str) the environment ID
@@ -18,7 +19,9 @@ def make_env(rank, env_conf, seed=0):
     :param rank: (int) index of the subprocess
     """
     def _init():
-        env = RedGymEnv(env_conf)
+        db_instance = DB(session_id)
+        instance_id = db_instance.create_instance(session_id)
+        env = RedGymEnv(session_id, instance_id, env_conf)
         env.reset(seed=(seed + rank))
         return env
     set_random_seed(seed)
@@ -28,22 +31,23 @@ if __name__ == '__main__':
 
 
     ep_length = 2048 * 8
-    sess_path = f'session_{str(uuid.uuid4())[:8]}'
-    args = get_args('run_baseline_parallel.py', ep_length=ep_length, sess_path=sess_path)
+    #sess_path = f'session_{str(uuid.uuid4())[:8]}'
+    db = DB()
+    args = get_args('run_baseline_parallel.py', ep_length=ep_length, sess_path=db.session_id)
 
     env_config = {
                 'headless': True, 'save_final_state': True, 'early_stop': False,
                 'action_freq': 24, 'init_state': '../has_pokedex_nballs.state', 'max_steps': ep_length, 
-                'print_rewards': True, 'save_video': False, 'fast_video': True, 'session_path': sess_path,
+                'print_rewards': True, 'save_video': False, 'fast_video': True, 'session_path': db.session_id,
                 'gb_path': '../PokemonRed.gb', 'debug': False, 'sim_frame_dist': 2_000_000.0
             }
     
     env_config = change_env(env_config, args)
     
-    num_cpu = 16 #64 #46  # Also sets the number of episodes per training iteration
-    env = SubprocVecEnv([make_env(i, env_config) for i in range(num_cpu)])
+    num_cpu = 4 #64 #46  # Also sets the number of episodes per training iteration
+    env = SubprocVecEnv([make_env(i, env_config, db.session_id) for i in range(num_cpu)])
     
-    checkpoint_callback = CheckpointCallback(save_freq=ep_length, save_path=sess_path,
+    checkpoint_callback = CheckpointCallback(save_freq=ep_length, save_path=db.session_id,
                                      name_prefix='poke')
     #env_checker.check_env(env)
     learn_steps = 40

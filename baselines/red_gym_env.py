@@ -22,12 +22,13 @@ import datetime
 
 from gymnasium import Env, spaces, wrappers
 from pyboy.utils import WindowEvent
+from db import DB
 
 class RedGymEnv(Env):
 
 
     def __init__(
-        self, db_obj, config=None):
+        self, session_id, instance_id, config=None):
 
         self.FEATURES_KEY = "features"
         self.FRAME_BUFFER_KEY = "frame_buffer"
@@ -120,8 +121,9 @@ class RedGymEnv(Env):
         self.screen = self.pyboy.botsupport_manager().screen()
 
         self.pyboy.set_emulation_speed(0 if config['headless'] else 6)
-        self.db = db_obj
-        self.db_instance_id = self.db.create_instance(self.db.session_id)
+        self.db = DB(session_id=session_id)
+        #self.db_instance_id = self.db.create_instance(self.db.session_id)
+        self.db_instance_id = instance_id
         self.reset()
 
     # Override from Gym

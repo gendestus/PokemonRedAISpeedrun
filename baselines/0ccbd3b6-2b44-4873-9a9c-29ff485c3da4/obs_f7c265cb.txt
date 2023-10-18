@@ -1,0 +1,1 @@
+2023-10-17 22:12:42.840443 :: enemy_pokemon: 36 |enemy_pokemon_health: 16 |enemy_pokemon_type1: 0 |enemy_pokemon_type2: 2 |map_id: 40 |player_pokemon1: 177 |player_pokemon2: 0 |player_pokemon3: 0 |player_pokemon4: 0 |player_pokemon5: 0 |player_pokemon6: 0 |num_badges: 0 |

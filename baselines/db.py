@@ -1,14 +1,18 @@
 import pymssql
 
 class DB:
-    def __init__(self):
+    def __init__(self, session_id = None):
         with open("dbinfo.txt", "r") as f:
             lines = f.readlines()
             self.server = lines[0].strip()
             self.user = lines[1].strip()
             self.password = lines[2].strip()
             self.database = lines[3].strip()
-        self.session_id = self.create_session()
+
+        if session_id is not None:
+            self.session_id = session_id
+        else:
+            self.session_id = self.create_session()
 
 
 

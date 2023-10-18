@@ -7,7 +7,7 @@ from stable_baselines3.common import env_checker
 from argparse_pokemon import *
 from db import DB
 
-sess_path = f'session_{str(uuid.uuid4())[:8]}'
+#sess_path = f'session_{str(uuid.uuid4())[:8]}'
 
 run_steps = 2048
 runs_per_update = 6
@@ -26,7 +26,7 @@ env_config = {
             }
 
 env_config = change_env(env_config, args)
-env = RedGymEnv(config=env_config, db_obj=db)
+env = RedGymEnv(config=env_config, session_id=db.session_id, instance_id=db.create_instance(db.session_id))
 
 env_checker.check_env(env)
 
